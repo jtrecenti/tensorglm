@@ -1,0 +1,2 @@
+# tensorglm
+GLM usando tensorflow
