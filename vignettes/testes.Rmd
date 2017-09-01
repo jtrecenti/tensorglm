@@ -1,0 +1,66 @@
+---
+title: "Vignette Title"
+author: "Vignette Author"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+```{r}
+library(tensorflow)
+library(tensorglm)
+```
+
+## Normal
+
+```{r}
+m_lm <- lm(carat ~ x + z, data = ggplot2::diamonds)
+m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds, 
+                 lr = 0.02, n = 6000)
+coef(m_lm)
+m_lm_tf
+```
+
+## Gamma
+
+```{r}
+d <- tibble::tibble(
+  x = runif(1e5, min = 0, max = 1), 
+  y = gamlss.dist::rGA(1e5, exp(2.5 + 0.1 * x))
+)
+
+m_gamma <- glm(y ~ x, data = d, family = Gamma(link = 'log'))
+m_gamma_tf <- glmtf(y ~ x, data = d, family = Gamma(link = 'log'),
+                    lr = 0.6, n = 100)
+
+round(coef(m_gamma), 5)
+unlist(m_gamma_tf)
+```
+
+## Poisson
+
+```{r}
+d <- tibble::tibble(
+  x = runif(1e5, min = 0, max = 1), 
+  y = rpois(1e5, exp(1.5 + 0.1 * x))
+)
+
+m_poisson <- glm(y ~ x, data = d, family = poisson)
+m_poisson_tf <- glmtf(y ~ x, data = d, family = poisson,
+                      lr = 0.05, n = 200)
+
+round(coef(m_poisson), 5)
+unlist(m_poisson_tf)
+```
+
