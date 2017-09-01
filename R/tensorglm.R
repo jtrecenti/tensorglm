@@ -7,11 +7,21 @@
 #' @param data data.frmae
 #' @param n number of GD iterations
 #' @param lr learning rate
+#' @param scale divide X variables by max before ajusting?
+#' @param verbose print model info
 #'
 #' @export
-glmtf <- function(formula, family = gaussian, data, n = 200, lr = 0.5) {
+glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
+                  scale = TRUE, verbose = FALSE) {
   tf <- tensorflow::tf
-  X <- tf$to_float(matrix(model.matrix(formula, data = data)[, -1], nrow(data)))
+  X <- matrix(model.matrix(formula, data = data)[, -1], nrow(data))
+  maxes <- 1
+  if (scale) {
+    X <- X / maxes
+    maxes <- apply(X, 2, max)
+    X <- t(t(X) / maxes)
+  }
+  X <- tf$to_float(X)
   y <- tf$to_float(matrix(eval(formula[[2]], data), nrow(X)))
   #-----------------------------------------------------------------------------
   W <- tf$Variable(tf$random_uniform(tensorflow::shape(ncol(X), 1), -1.0, 1.0))
@@ -36,15 +46,21 @@ glmtf <- function(formula, family = gaussian, data, n = 200, lr = 0.5) {
     'Gamma' = tf$reduce_mean((y / mu - log(y / mu) - 1) * 2)
   )
   #-----------------------------------------------------------------------------
-  optimizer <- tf$train$GradientDescentOptimizer(lr)
+  optimizer <- tf$train$GradientDescentOptimizer(lr, use_locking = TRUE)
   train <- optimizer$minimize(loss)
   sess <- tf$Session()
   sess$run(tf$global_variables_initializer())
   #-----------------------------------------------------------------------------
   for (step in seq_len(n)) {
     sess$run(train)
+    if (verbose && step %% 100 == 0) {
+      WW <- paste(as.character(round(unlist(sess$run(W) / maxes), 4)),
+                  collapse = ', ')
+      s <- 'Iter: %d, b=%s, W=(%s)\n'
+      cat(sprintf(s, step, round(sess$run(b), 4), WW))
+    }
   }
-  list(b = sess$run(b), W = sess$run(W))
+  list(b = sess$run(b), W = sess$run(W) / maxes)
 }
 
 ## modelo GLM
