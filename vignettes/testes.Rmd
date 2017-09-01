@@ -26,8 +26,7 @@ library(tensorglm)
 
 ```{r}
 m_lm <- lm(carat ~ x + z, data = ggplot2::diamonds)
-m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds, 
-                 lr = 0.02, n = 6000)
+m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds)
 coef(m_lm)
 m_lm_tf
 ```
@@ -41,12 +40,23 @@ d <- tibble::tibble(
 )
 
 m_gamma <- glm(y ~ x, data = d, family = Gamma(link = 'log'))
-m_gamma_tf <- glmtf(y ~ x, data = d, family = Gamma(link = 'log'),
-                    lr = 0.6, n = 100)
+m_gamma_tf <- glmtf(y ~ x, data = d, family = Gamma(link = 'log'))
 
 round(coef(m_gamma), 5)
 unlist(m_gamma_tf)
 ```
+
+```{r}
+
+form <- mpg ~ disp
+d <- mtcars
+m_gamma <- glm(form, data = d, family = Gamma(link = 'log'))
+m_gamma_tf <- glmtf(form, data = d, family = Gamma(link = 'log'))
+
+coef(m_gamma)
+m_gamma_tf
+```
+
 
 ## Poisson
 
