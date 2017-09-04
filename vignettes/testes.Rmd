@@ -26,7 +26,7 @@ library(tensorglm)
 
 ```{r}
 m_lm <- lm(carat ~ x + z, data = ggplot2::diamonds)
-m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds)
+m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds, n = 5000)
 coef(m_lm)
 m_lm_tf
 ```
@@ -34,13 +34,16 @@ m_lm_tf
 ## Gamma
 
 ```{r}
-d <- tibble::tibble(
-  x = runif(1e5, min = 0, max = 1), 
-  y = gamlss.dist::rGA(1e5, exp(2.5 + 0.1 * x))
+d <- data.frame(x = runif(1e7, min = 0, max = 1))
+d$y <- gamlss.dist::rGA(1e7, exp(2.5 + 0.1 * d$x))
+
+system.time(
+  m_gamma <- glm(y ~ x, data = d, family = Gamma(link = 'log'))
 )
 
-m_gamma <- glm(y ~ x, data = d, family = Gamma(link = 'log'))
-m_gamma_tf <- glmtf(y ~ x, data = d, family = Gamma(link = 'log'))
+system.time(
+  m_gamma_tf <- glmtf(y ~ x, data = d, family = Gamma(link = 'log'), n = 1000)
+)
 
 round(coef(m_gamma), 5)
 unlist(m_gamma_tf)

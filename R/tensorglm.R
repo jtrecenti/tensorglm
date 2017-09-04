@@ -9,10 +9,11 @@
 #' @param lr learning rate
 #' @param scale divide X variables by max before ajusting?
 #' @param verbose print model info
+#' @param clip clip value
 #'
 #' @export
 glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
-                  scale = TRUE, verbose = FALSE) {
+                  clip = 1.0, scale = TRUE, verbose = FALSE) {
   tf <- tensorflow::tf
   X <- matrix(model.matrix(formula, data = data)[, -1], nrow(data))
   maxes <- 1
@@ -46,8 +47,14 @@ glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
     'Gamma' = tf$reduce_mean((y / mu - log(y / mu) - 1) * 2)
   )
   #-----------------------------------------------------------------------------
-  optimizer <- tf$train$GradientDescentOptimizer(lr, use_locking = TRUE)
-  train <- optimizer$minimize(loss)
+  optimizer <- tf$train$GradientDescentOptimizer(lr)
+  gvs <- optimizer$compute_gradients(loss)
+  invisible(
+    purrr::map_if(gvs, ~!is.null(.x[[1]]),
+                  ~tf$clip_by_value(.x[[1]], -1.0, 1.0))
+  )
+  train <- optimizer$apply_gradients(gvs)
+  # train <- optimizer$minimize(loss)
   sess <- tf$Session()
   sess$run(tf$global_variables_initializer())
   #-----------------------------------------------------------------------------
