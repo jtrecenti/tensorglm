@@ -29,6 +29,7 @@ m_lm <- lm(carat ~ x + z, data = ggplot2::diamonds)
 m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds, n = 5000)
 coef(m_lm)
 m_lm_tf
+print(m_lm_tf)
 ```
 
 ## Gamma
