@@ -17,6 +17,39 @@ knitr::opts_chunk$set(
 ```
 
 
+$f$ é a log-verossimilhança 
+
+Newton raphson:
+
+Queremos fazer a derivada da log-verossimilhanca ($f$) igual a zero
+
+$$
+f'(\beta) = 0
+$$
+
+$$
+\beta_{n+1} = \beta_n - \frac{f'(x_n)}{f''(x_n)}
+$$
+
+
+
+
+- utiliza teorema do valor médio (cálculo 1)
+- usa segunda derivada
+- converge mais rápido
+
+
+Gradient descent:
+
+$$
+\beta_{n+1} = \beta_{n} - \alpha f'(\beta_n)
+$$
+
+
+
+
+
+
 ```{r}
 library(tensorflow)
 library(tensorglm)
@@ -26,41 +59,35 @@ library(tensorglm)
 
 ```{r}
 m_lm <- lm(carat ~ x + z, data = ggplot2::diamonds)
-m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds, n = 5000)
+m_lm_tf <- glmtf(carat ~ x + z, data = ggplot2::diamonds, n = 1000, lr = 0.7)
+m_lm_tf <- glmk(carat ~ x + z, data = ggplot2::diamonds, epochs = 100,
+                family = gaussian, lr = 0.6)
+
+
+
 coef(m_lm)
-m_lm_tf
-print(m_lm_tf)
+unlist(m_lm_tf)
 ```
 
 ## Gamma
 
 ```{r}
-d <- data.frame(x = runif(1e7, min = 0, max = 1))
-d$y <- gamlss.dist::rGA(1e7, exp(2.5 + 0.1 * d$x))
-
-system.time(
-  m_gamma <- glm(y ~ x, data = d, family = Gamma(link = 'log'))
-)
-
-system.time(
-  m_gamma_tf <- glmtf(y ~ x, data = d, family = Gamma(link = 'log'), n = 1000)
-)
-
-round(coef(m_gamma), 5)
-unlist(m_gamma_tf)
-```
-
-```{r}
-
 form <- mpg ~ disp
 d <- mtcars
+
 m_gamma <- glm(form, data = d, family = Gamma(link = 'log'))
 m_gamma_tf <- glmtf(form, data = d, family = Gamma(link = 'log'))
 
 coef(m_gamma)
-m_gamma_tf
-```
+unlist(m_gamma_tf)
 
+library(magrittr)
+  m_gamma_k <- glmk(form, data = d, family = Gamma(link = 'log'),
+                  batch_size = 10, lr = 0.01)
+
+m_gamma
+m_gamma_k
+```
 
 ## Poisson
 
@@ -73,6 +100,14 @@ d <- tibble::tibble(
 m_poisson <- glm(y ~ x, data = d, family = poisson)
 m_poisson_tf <- glmtf(y ~ x, data = d, family = poisson,
                       lr = 0.05, n = 200)
+
+m_poisson_k <- glmk(y ~ x, data = d, family = poisson,
+                    batch_size = 100, epochs = 10,
+                    lr = 0.01)
+
+
+m_poisson
+m_poisson_k
 
 round(coef(m_poisson), 5)
 unlist(m_poisson_tf)
