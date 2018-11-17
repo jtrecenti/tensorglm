@@ -24,14 +24,11 @@ glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
     maxes <- apply(X, 2, max)
     X <- t(t(X) / maxes)
   }
-
-
   X <- tf$to_float(X)
   y <- tf$to_float(matrix(eval(formula[[2]], data), nrow(X)))
 
-
   #-----------------------------------------------------------------------------
-  W <- tf$Variable(tf$random_uniform(tensorflow::shape(ncol(X), 1), -1.0, 1.0))
+  W <- tf$Variable(tf$random_normal(tensorflow::shape(ncol(X), 1)))
   b <- tf$Variable(tf$zeros(tensorflow::shape(1L)))
   eta <- tf$matmul(X, W) + b
 
@@ -45,6 +42,7 @@ glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
     stop("'family' not recognized")
   }
   if (family$link == 'log') family$linkinv <- exp
+  if (family$link == 'logit') family$linkinv <- tf$sigmoid
   mu <- family$linkinv(eta)
   eps <- 1e-08
 
@@ -53,8 +51,10 @@ glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
     'gaussian' = tf$reduce_mean((y - mu) ^ 2),
     'poisson' = tf$reduce_mean((y * (log((y + eps) / mu) - 1) + mu) * 2),
     'Gamma' = tf$reduce_mean((y / mu - log(y / mu) - 1) * 2),
-    "binomial" = tf$reduce_mean()
+    "binomial" = tf$reduce_mean(tf$maximum(mu, 0) - mu * y + log(1 + exp(-abs(mu))))
   )
+
+
 
   #-----------------------------------------------------------------------------
   optimizer <- tf$train$GradientDescentOptimizer(lr)
@@ -79,7 +79,8 @@ glmtf <- function(formula, family = gaussian, data, n = 1000, lr = 0.5,
 }
 
 # -------------------------------------------------------------------
-glmk <- function(formula, family = gaussian, data, epochs = 1000, lr = 0.01,
+glmk <- function(formula, family = gaussian, data,
+                 epochs = 10, lr = 0.01,
                  batch_size = nrow(data) / 10,
                  scale = TRUE, verbose = FALSE) {
 
@@ -107,7 +108,7 @@ glmk <- function(formula, family = gaussian, data, epochs = 1000, lr = 0.01,
     family$link,
     "identity" = keras::k_identity,
     'log' = keras::k_exp,
-    'inverse' = function(x) 1/x,
+    'inverse' = function(x) 1 / x,
     'logit' = keras::k_sigmoid,
   )
   eps <- 1e-08
@@ -117,7 +118,7 @@ glmk <- function(formula, family = gaussian, data, epochs = 1000, lr = 0.01,
     'gaussian' = function(y, mu) keras::k_mean((y - mu) ^ 2),
     'poisson' = function(y, mu) keras::k_mean((y * (keras::k_log((y + eps) / mu) - 1) + mu) * 2),
     'Gamma' = function(y, mu) keras::k_mean((y / mu - keras::k_log(y / mu) - 1) * 2),
-    "binomial" = function(y, mu) keras::k_mean(y * keras::k_log(mu) + (1 - y) * keras::k_log(1 - mu))
+    "binomial" = function(y, mu) keras::k_mean(- y * keras::k_log(mu) - (1 - y) * keras::k_log(1 - mu))
   )
 
   X_ <- keras::layer_input(ncol(X))
@@ -135,6 +136,25 @@ glmk <- function(formula, family = gaussian, data, epochs = 1000, lr = 0.01,
     magrittr::divide_by(maxes)
 
 }
+
+
+glm_est <- function(formula, family = gaussian, data,
+                    epochs = 10, lr = 0.01,
+                    batch_size = nrow(data) / 10,
+                    scale = TRUE, verbose = FALSE) {
+
+  X <- matrix(model.matrix(formula, data = data), nrow(data))
+  maxes <- 1.0
+  if (scale) {
+    X <- X / maxes
+    maxes <- apply(X, 2, max)
+    X <- t(t(X) / maxes)
+  }
+  y <- matrix(eval(formula[[2]], data), nrow(X))
+
+}
+
+
 
 
 ## modelo GLM

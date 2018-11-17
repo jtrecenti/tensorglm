@@ -113,3 +113,29 @@ round(coef(m_poisson), 5)
 unlist(m_poisson_tf)
 ```
 
+## Binomial
+
+```{r}
+
+N <- 10000
+x1 <- rnorm(N)
+x2 <- rnorm(N)
+eta <- 1 + 2 * x1 + 3 * x2
+logit <- 1 / (1 + exp(-eta))
+y <- rbinom(N, 1, logit)
+d <- data.frame(y, x1, x2)
+
+summary(resp2) <- glm(y ~ x1 + x2, data = d, family = binomial())
+summary(resp2_2) <- glm2(y ~ x1 + x2, data = d, family = binomial())
+
+resp3 <- glmtf(y ~ x1 + x2, data = d, family = binomial(),
+               lr = 0.01, n = 10000, verbose = TRUE,
+               scale = FALSE)
+
+resp <- glmk(y ~ x1 + x2, data = d, family = binomial(), 
+             lr = 2,
+             epochs = 100)
+print(resp)
+
+```
+
