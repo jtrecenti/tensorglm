@@ -1,6 +1,7 @@
+#' @export
 glmtf.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NULL,
                        mustart = NULL, offset = rep(0, nobs), family = gaussian(),
-                       control = list(), intercept = TRUE) {
+                       control = list(), intercept = TRUE, singular.ok = TRUE) {
 
   # parameter initialization ---------------------------------------------------
   control <- do.call("glm.control", control)
@@ -93,13 +94,23 @@ glmtf.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NU
         warning(gettextf("no observations informative at iteration %d", iter), domain = NA)
         break
       }
-      z <- (eta - offset)[good] + (y - mu)[good]/mu.eta.val[good]
+      z <- (eta - offset)[good] + (y - mu)[good] / mu.eta.val[good]
       w <- sqrt((weights[good] * mu.eta.val[good]^2) / variance(mu)[good])
+
+
       # weighted least square
-      fit <- .Call(C_Cdqrls,
-                   x[good, , drop = FALSE] * w,
-                   z * w, min(1e-07, control$epsilon/1000),
-                   check = FALSE)
+      # fit <- .Call(C_Cdqrls,
+      #              x[good, , drop = FALSE] * w,
+      #              z * w,
+      #              min(1e-07, control$epsilon/1000),
+      #              check = FALSE)
+
+      fit <- .tf_qr_fit(x[good, , drop = FALSE] * w,
+                        z * w,
+                        min(1e-07, control$epsilon/1000),
+                        check = FALSE)
+
+
       # checks
       if (any(!is.finite(fit$coefficients))) {
         conv <- FALSE
@@ -111,6 +122,11 @@ glmtf.fit <- function (x, y, weights = rep(1, nobs), start = NULL, etastart = NU
         stop(sprintf(ngettext(nobs, "X matrix has rank %d, but only %d observation",
                               "X matrix has rank %d, but only %d observations"),
                      fit$rank, nobs), domain = NA)
+
+      if (!singular.ok && fit$rank < nvars)
+        stop("singular fit encountered")
+
+
       start[fit$pivot] <- fit$coefficients
       eta <- drop(x %*% start)
       mu <- linkinv(eta <- eta + offset)

@@ -122,8 +122,75 @@ x1 <- rnorm(N)
 x2 <- rnorm(N)
 eta <- 1 + 2 * x1 + 3 * x2
 logit <- 1 / (1 + exp(-eta))
+x <- cbind(1, x1, x2)
 y <- rbinom(N, 1, logit)
 d <- data.frame(y, x1, x2)
+
+y <- rnorm(n, eta)
+
+fit2 <- lm(y ~ x)
+fit <- .lm.fit(x, y)
+
+
+# qr
+#
+
+# coeficientes
+# solve(t(x) %*% x) %*% t(x) %*% matrix(y, ncol = 1)
+
+set.seed(1)
+N <- 10000
+X <- matrix(rnorm(3*N), ncol = 3)
+y <- rnorm(N, apply(X, 1, sum))
+
+coef(lm(y ~ X+0))
+lm.fit(X, y)$coefficients
+.lm.fit(X, y)$coefficients
+qr.solve(X, y)
+solve(qr(X), y)
+solve(t(X) %*% X) %*% t(X) %*% y
+
+
+
+library(tensorflow)
+
+set.seed(1)
+N <- 10000
+X <- matrix(rnorm(3*N), ncol = 3)
+y <- rnorm(N, apply(X, 1, sum))
+
+lm_qr_tf <- function(X, y) {
+  X_ <- tf$to_float(X)
+  y_ <- tf$to_float(matrix(y, ncol = 1))
+  QR <- tf$qr(X_)
+  qy <- tf$matmul(QR$q, y_, transpose_a = TRUE)
+  beta <- tf$matrix_solve(QR$r, qy)
+  sess <- tf$Session()
+  sess$run(beta)
+}
+
+lm_qr_tf(X, y)
+
+
+m <- microbenchmark::microbenchmark(
+  qr.solve(X, y),
+  lm_qr_tf(X, y)
+)
+
+
+
+
+solve(qr.R(qr(X))) %*% t(qr.Q(qr(X))) %*% y
+
+
+fit$coefficients
+
+head(fit$qr)
+
+all.equal(fit$residuals, as.numeric(resid(fit2)))
+
+
+
 
 summary(resp2) <- glm(y ~ x1 + x2, data = d, family = binomial())
 summary(resp2_2) <- glm2(y ~ x1 + x2, data = d, family = binomial())
