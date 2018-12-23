@@ -19,7 +19,7 @@
   pv <- seq_len(p)
 
   list(
-    qr = X,
+    qr = matrix(1L, ncol = ncol(X), nrow = nrow(X)),
     coefficients = as.numeric(sess$run(beta)),
     rank = p,
     pivot = pv,
@@ -31,4 +31,3 @@
     qraux = pv
   )
 }
-
